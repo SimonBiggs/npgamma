@@ -15,6 +15,47 @@
 import numpy as np
 
 
+def calc_gamma_3d(x_reference, y_reference, z_reference, dose_reference,
+                  x_evaluation, y_evaluation, z_evaluation, dose_evaluation
+                  dose_threshold=None, distance_threshold=None):
+
+    xref, yref, zref = np.meshgrid(x_reference, y_reference, z_reference)
+    xref = np.ravel(xref)
+    yref = np.ravel(yref)
+    zref = np.ravel(zref)
+    dose_ref = np.ravel(dose_reference)
+
+    xeval, yeval, zeval = np.meshgrid(x_evaluation, y_evaluation, z_evaluation)
+    xeval = np.ravel(xeval)
+    yeval = np.ravel(yeval)
+    zeval = np.ravel(zeval)
+    dose_eval = np.ravel(dose_evaluation)
+
+    distances = np.array([
+        np.sqrt(
+            (xeval[i] - xref)**2 +
+            (yeval[i] - yref)**2 +
+            (zeval[i] - zref)**2
+        )
+        for i in range(len(xeval))
+    ])
+
+    dose_diff = np.array([
+        dose_eval_i - dose_ref
+        for dose_eval_i in dose_eval
+    ])
+
+    generalised_gamma = np.sqrt(
+        distances**2 / distance_threshold**2 +
+        dose_diff**2 / dose_threshold**2
+    )
+
+    gamma_before_reshape = np.min(generalised_gamma, axis=1)
+    gamma = np.reshape(gamma_before_reshape, np.shape(dose_evaluation))
+
+    return gamma
+
+
 def calc_gamma(x_reference, y_reference, dose_reference,
                x_evaluation, y_evaluation, dose_evaluation,
                dose_threshold=None, distance_threshold=None):
