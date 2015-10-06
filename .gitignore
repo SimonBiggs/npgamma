@@ -1,6 +1,9 @@
 # IPython Notebooks
 .ipynb_checkpoints/
 
+# gedit
+*~
+~*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
