@@ -38,8 +38,8 @@ def calc_gamma(x_reference, y_reference, dose_reference,
     ])
 
     dose_diff = np.array([
-        dose_eval[i] - dose_ref
-        for i in range(len(dose_eval))
+        dose_eval_i - dose_ref
+        for dose_eval_i in dose_eval
     ])
 
     generalised_gamma = np.sqrt(
