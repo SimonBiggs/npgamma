@@ -16,7 +16,7 @@ import numpy as np
 
 
 def calc_gamma_3d(x_reference, y_reference, z_reference, dose_reference,
-                  x_evaluation, y_evaluation, z_evaluation, dose_evaluation
+                  x_evaluation, y_evaluation, z_evaluation, dose_evaluation,
                   dose_threshold=None, distance_threshold=None):
 
     xref, yref, zref = np.meshgrid(x_reference, y_reference, z_reference)
