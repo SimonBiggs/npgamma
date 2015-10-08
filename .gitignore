@@ -1,5 +1,8 @@
 # IPython Notebooks
 .ipynb_checkpoints/
+.sandbox.ipynb
+.sandbox_data/
+.sandbox
 
 # gedit
 *~
