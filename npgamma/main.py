@@ -103,8 +103,8 @@ def calc_gamma_2d(x, y, dose_evaluation, dose_reference,
         distance = dist_sort[current_test_set][:, None, None]
 
         general_gamma = np.sqrt(
-            dose_diff ** 2 / dose_threshold**2 +
-            distance ** 2 / distance_threshold
+            dose_diff ** 2 / dose_threshold ** 2 +
+            distance ** 2 / distance_threshold ** 2
         )
 
         running_general_gamma = np.vstack([
@@ -229,8 +229,8 @@ def calc_gamma_3d(x, y, z, dose_evaluation, dose_reference,
         distance = dist_sort[current_test_set][:, None, None, None]
 
         general_gamma = np.sqrt(
-            dose_diff ** 2 / dose_threshold**2 +
-            distance ** 2 / distance_threshold
+            dose_diff ** 2 / dose_threshold ** 2 +
+            distance ** 2 / distance_threshold ** 2
         )
 
         running_general_gamma = np.vstack([
