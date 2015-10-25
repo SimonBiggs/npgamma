@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name = "npgamma",
-    version = "0.3.4",
+    version = "0.4.0",
     author = "Simon Biggs",
     author_email = "mail@simonbiggs.net",
     description = "Perform a gamma evaluation comparing two dose grids",

@@ -13,238 +13,277 @@
 
 import numpy as np
 
-
-def calc_gamma_2d(x, y, dose_evaluation, dose_reference,
-                  distance_threshold=None, dose_threshold=None,
-                  max_test_dist=None, step_group_size=24):
-    if max_test_dist is None:
-        max_test_dist = distance_threshold * 2
-
-    x = np.array(x); y = np.array(y)
-    dose_evaluation = np.array(dose_evaluation)
-    dose_reference = np.array(dose_reference)
-
-    dx = x[1] - x[0]
-    dy = y[1] - y[0]
-
-    assert np.all(np.abs(np.linspace(x[0], x[-1], len(x)) - x) < 0.0001)
-    assert np.all(np.abs(np.linspace(y[0], y[-1], len(y)) - y) < 0.0001)
-
-    mid_x_index = len(x) // 2
-    mid_y_index = len(y) // 2
-
-    xx_, yy_ = np.meshgrid(x, y)
-    xx = np.ravel(xx_)
-    yy = np.ravel(yy_)
-
-    distance_from_middle = np.sqrt(
-    (xx - x[mid_x_index])**2 +
-    (yy - y[mid_y_index])**2)
-
-    cut_off_dist = distance_from_middle < max_test_dist
-    dist_sort_index = np.argsort(distance_from_middle[cut_off_dist])
-    dist_sort = distance_from_middle[cut_off_dist][dist_sort_index]
-
-    x_index = np.arange(len(x))
-    y_index = np.arange(len(y))
-
-    xx_index_, yy_index_ = np.meshgrid(x_index, y_index)
-    xx_index = np.ravel(xx_index_)
-    yy_index = np.ravel(yy_index_)
-
-    x_dist_sort = (xx_index[cut_off_dist][dist_sort_index] - mid_x_index)
-    y_dist_sort = (yy_index[cut_off_dist][dist_sort_index] - mid_y_index)
-
-    i_start = y_dist_sort - np.min(y_dist_sort)
-    i_start = i_start.tolist()
-
-    i_end = y_dist_sort - np.max(y_dist_sort)
-    ref = np.where(i_end == 0)[0]
-    i_end = i_end.tolist()
-    for i in ref:
-        i_end[i] = None
-
-    j_start = x_dist_sort - np.min(x_dist_sort)
-    j_start = j_start.tolist()
-
-    j_end = x_dist_sort - np.max(x_dist_sort)
-    ref = np.where(j_end == 0)[0]
-    j_end = j_end.tolist()
-    for i in ref:
-        j_end[i] = None
-
-    x_new = x[j_start[0]:j_end[0]]
-    y_new = y[i_start[0]:i_end[0]]
-
-    running_minima = np.inf * np.ones_like(
-        dose_evaluation[
-            i_start[0]:i_end[0],
-            j_start[0]:j_end[0]])
-
-    for current_step in range(0, len(i_start), step_group_size):
-
-        current_step_end = np.min([
-            current_step + step_group_size,
-            len(i_start)])
-        current_test_set = range(
-            current_step, current_step_end)
-
-        dose_diff = np.array([
-            (
-                dose_evaluation[
-                    i_start[i]:i_end[i],
-                    j_start[i]:j_end[i]] -
-                dose_reference[
-                    i_start[i]:i_end[i],
-                    j_start[i]:j_end[i]]
-            )
-         for i in current_test_set])
-
-        distance = dist_sort[current_test_set][:, None, None]
-
-        general_gamma = np.sqrt(
-            dose_diff ** 2 / dose_threshold ** 2 +
-            distance ** 2 / distance_threshold ** 2
-        )
-
-        running_general_gamma = np.vstack([
-            general_gamma, running_minima[None, :, :]])
-
-        running_minima = np.min(running_general_gamma, axis=0)
-
-        stop = (
-            np.max(running_minima) <
-            np.sqrt(np.max(distance) ** 2 / distance_threshold ** 2))
-
-        if stop:
-            break
-
-    gamma = running_minima
-
-    return x_new, y_new, gamma
+from scipy.interpolate import RegularGridInterpolator
 
 
-def calc_gamma_3d(x, y, z, dose_evaluation, dose_reference,
-                  distance_threshold=None, dose_threshold=None,
-                  max_test_dist=None, step_group_size=24):
-    if max_test_dist is None:
-        max_test_dist = distance_threshold * 2
+def calc_gamma(coords_reference, dose_reference,
+               coords_evaluation, dose_evaluation,
+               distance_threshold, dose_threshold,
+               lower_dose_cutoff=0, distance_step_size=None,
+               maximum_test_distance=None):
+    if (
+            type(coords_evaluation) is not tuple or
+            type(coords_reference) is not tuple):
+        raise Exception(
+            "Input coordinates must be inputted as a tuple, for "
+            "one dimension input is (x,), for two dimensions, (y, x),  "
+            "for three dimensions input is (y, x, z).")
 
-    dx = x[1] - x[0]
-    dy = y[1] - y[0]
-    dz = z[1] - z[0]
+    reference_coords_shape = tuple([len(item) for item in coords_reference])
+    if reference_coords_shape != np.shape(dose_reference):
+        raise Exception(
+            "Length of items in coords_reference does not match the shape of "
+            "dose_reference")
 
-    assert np.all(np.abs(np.linspace(x[0], x[-1], len(x)) - x) < 0.0001)
-    assert np.all(np.abs(np.linspace(y[0], y[-1], len(y)) - y) < 0.0001)
-    assert np.all(np.abs(np.linspace(z[0], z[-1], len(z)) - z) < 0.0001)
+    evaluation_coords_shape = tuple([len(item) for item in coords_evaluation])
+    if evaluation_coords_shape != np.shape(dose_evaluation):
+        raise Exception(
+            "Length of items in coords_evaluation does not match the shape of "
+            "dose_evaluation")
 
-    mid_x_index = len(x) // 2
-    mid_y_index = len(y) // 2
-    mid_z_index = len(z) // 2
+    if not (len(np.shape(dose_evaluation)) ==
+            len(np.shape(dose_reference)) ==
+            len(coords_evaluation) ==
+            len(coords_reference)):
+        raise Exception(
+            "The dimensions of the input data do not match")
 
-    xx_, yy_, zz_ = np.meshgrid(x, y, z)
-    xx = np.ravel(xx_)
-    yy = np.ravel(yy_)
-    zz = np.ravel(zz_)
+    dimension = len(coords_evaluation)
 
-    distance_from_middle = np.sqrt(
-        (xx - x[mid_x_index])**2 +
-        (yy - y[mid_y_index])**2 +
-        (zz - z[mid_z_index])**2
+    if dimension == 3:
+        gamma = calc_gamma_3d(
+            coords_reference, dose_reference,
+            coords_evaluation, dose_evaluation,
+            distance_threshold, dose_threshold,
+            lower_dose_cutoff=lower_dose_cutoff,
+            distance_step_size=distance_step_size,
+            maximum_test_distance=maximum_test_distance)
+
+    elif dimension == 2:
+        gamma = calc_gamma_2d(
+            coords_reference, dose_reference,
+            coords_evaluation, dose_evaluation,
+            distance_threshold, dose_threshold,
+            lower_dose_cutoff=lower_dose_cutoff,
+            distance_step_size=distance_step_size,
+            maximum_test_distance=maximum_test_distance)
+    elif dimension == 1:
+        raise Exception("One dimensional gamma is not yet implemented")
+
+    else:
+        raise Exception("Unexpected dimension recieved")
+
+    return gamma
+
+
+def coords_to_check_2d(distance, step_size):
+    amount_to_check = np.floor(
+        2 * np.pi * distance / step_size) + 1
+    theta = np.linspace(0, 2*np.pi, amount_to_check + 1)[:-1:]
+    x = distance * np.cos(theta)
+    y = distance * np.sin(theta)
+
+    return x, y
+
+
+def coords_to_check_3d(distance, step_size):
+    number_of_rows = np.floor(
+        np.pi * distance / step_size) + 1
+    elevation = np.linspace(0, np.pi, number_of_rows)
+    row_radii = distance * np.sin(elevation)
+    row_circumference = 2 * np.pi * row_radii
+    amount_in_row = np.floor(row_circumference / step_size) + 1
+
+    x = []; y = []; z = []
+    for i, phi in enumerate(elevation):
+        azimuth = np.linspace(0, 2*np.pi, amount_in_row[i] + 1)[:-1:]
+        x.append(distance * np.sin(phi) * np.cos(azimuth))
+        y.append(distance * np.sin(phi) * np.sin(azimuth))
+        z.append(distance * np.cos(phi) * np.ones_like(azimuth))
+
+    x = np.hstack(x)
+    y = np.hstack(y)
+    z = np.hstack(z)
+
+    return x, y, z
+
+
+def find_min_dose_difference_at_distance_2d(x_test, y_test, dose_test,
+                                            reference_interpolation,
+                                            distance, step_size):
+    x_shift, y_shift = coords_to_check_2d(
+        distance, step_size)
+
+    x_coords = x_test[None,:] + x_shift[:, None]
+    y_coords = y_test[None,:] + y_shift[:, None]
+
+    all_points = np.concatenate(
+        (y_coords[:,:,None], x_coords[:,:,None]), axis=2)
+
+    dose_difference = np.array([
+        reference_interpolation(points) - dose_test for
+        points in all_points
+    ])
+    min_dose_difference = np.min(np.abs(dose_difference), axis=0)
+
+    return min_dose_difference
+
+
+def find_min_dose_difference_at_distance_3d(x_test, y_test, z_test,
+                                            dose_test, reference_interpolation,
+                                            distance, step_size):
+    x_shift, y_shift, z_shift = coords_to_check_3d(
+        distance, step_size)
+
+    x_coords = x_test[None,:] + x_shift[:, None]
+    y_coords = y_test[None,:] + y_shift[:, None]
+    z_coords = z_test[None,:] + z_shift[:, None]
+
+    all_points = np.concatenate(
+        (y_coords[:,:,None], x_coords[:,:,None], z_coords[:,:,None]),
+        axis=2)
+
+    dose_difference = np.array([
+        reference_interpolation(points) - dose_test for
+        points in all_points
+    ])
+    min_dose_difference = np.min(np.abs(dose_difference), axis=0)
+
+    return min_dose_difference
+
+
+def calc_gamma_2d(coords_reference, dose_reference,
+                  coords_evaluation, dose_evaluation,
+                  distance_threshold, dose_threshold,
+                  lower_dose_cutoff=0, distance_step_size=None,
+                  maximum_test_distance=None):
+    if distance_step_size is None:
+        distance_step_size = distance_threshold / 10
+
+    if maximum_test_distance is None:
+        maximum_test_distance = distance_threshold * 2
+
+    reference_interpolation = RegularGridInterpolator(
+        coords_reference, dose_reference
     )
 
-    cut_off_dist = distance_from_middle < max_test_dist
-    dist_sort_index = np.argsort(distance_from_middle[cut_off_dist])
-    dist_sort = distance_from_middle[cut_off_dist][dist_sort_index]
+    y_reference, x_reference = coords_reference
 
-    x_index = np.arange(len(x))
-    y_index = np.arange(len(y))
-    z_index = np.arange(len(z))
+    y, x = coords_evaluation
+    xx, yy = np.meshgrid(x, y)
+    dose_evaluation = np.array(dose_evaluation)
 
-    xx_index_, yy_index_, zz_index_ = np.meshgrid(
-        x_index, y_index, z_index)
-    xx_index = np.ravel(xx_index_)
-    yy_index = np.ravel(yy_index_)
-    zz_index = np.ravel(zz_index_)
+    dose_valid = dose_evaluation > lower_dose_cutoff
+    gamma_valid = np.ones_like(dose_evaluation).astype(bool)
 
-    x_dist_sort = (xx_index[cut_off_dist][dist_sort_index] - mid_x_index)
-    y_dist_sort = (yy_index[cut_off_dist][dist_sort_index] - mid_y_index)
-    z_dist_sort = (zz_index[cut_off_dist][dist_sort_index] - mid_z_index)
+    running_gamma = np.inf * np.ones_like(dose_evaluation)
 
-    i_start = y_dist_sort - np.min(y_dist_sort)
-    i_start = i_start.tolist()
-    i_end = y_dist_sort - np.max(y_dist_sort)
-    ref = np.where(i_end == 0)[0]
-    i_end = i_end.tolist()
-    for i in ref:
-        i_end[i] = None
+    distance = 0
 
-    j_start = x_dist_sort - np.min(x_dist_sort)
-    j_start = j_start.tolist()
-    j_end = x_dist_sort - np.max(x_dist_sort)
-    ref = np.where(j_end == 0)[0]
-    j_end = j_end.tolist()
-    for i in ref:
-        j_end[i] = None
+    while True:
+        x_valid = (
+            (xx > np.min(x_reference) + distance) &
+            (xx < np.max(x_reference) - distance))
 
-    k_start = z_dist_sort - np.min(z_dist_sort)
-    k_start = k_start.tolist()
-    k_end = z_dist_sort - np.max(z_dist_sort)
-    ref = np.where(k_end == 0)[0]
-    k_end = k_end.tolist()
-    for i in ref:
-        k_end[i] = None
+        y_valid = (
+            (yy > np.min(y_reference) + distance) &
+            (yy < np.max(y_reference) - distance))
 
-    x_new = x[j_start[0]:j_end[0]]
-    y_new = y[i_start[0]:i_end[0]]
-    z_new = z[k_start[0]:k_end[0]]
-
-    running_minima = np.inf * np.ones_like(
-        dose_evaluation[
-            i_start[0]:i_end[0],
-            j_start[0]:j_end[0],
-            k_start[0]:k_end[0]])
-
-    for current_step in range(0, len(i_start), step_group_size):
-
-        current_step_end = np.min([
-            current_step + step_group_size,
-            len(i_start)])
-        current_test_set = range(
-            current_step, current_step_end)
-
-        dose_diff = np.array([
-            (
-                dose_evaluation[
-                    i_start[i]:i_end[i],
-                    j_start[i]:j_end[i],
-                    k_start[i]:k_end[i]] -
-                dose_reference[
-                    i_start[i]:i_end[i],
-                    j_start[i]:j_end[i],
-                    k_start[i]:k_end[i]]
-            )
-         for i in current_test_set])
-
-        distance = dist_sort[current_test_set][:, None, None, None]
-
-        general_gamma = np.sqrt(
-            dose_diff ** 2 / dose_threshold ** 2 +
-            distance ** 2 / distance_threshold ** 2
+        to_be_checked = (
+            dose_valid & x_valid & y_valid & gamma_valid
         )
 
-        running_general_gamma = np.vstack([
-            general_gamma, running_minima[None, :, :, :]])
+        min_dose_diff = find_min_dose_difference_at_distance_2d(
+            xx[to_be_checked], yy[to_be_checked],
+            dose_evaluation[to_be_checked],
+            reference_interpolation,
+            distance, distance_step_size)
 
-        running_minima = np.min(running_general_gamma, axis=0)
+        gamma_at_distance = np.sqrt(
+            min_dose_diff ** 2 / dose_threshold ** 2 +
+            distance **2 / distance_threshold **2)
 
-        stop = (
-            np.max(running_minima) <
-            np.sqrt(np.max(distance) ** 2 / distance_threshold ** 2))
+        running_gamma[to_be_checked] = np.min(
+            np.vstack((
+                    gamma_at_distance, running_gamma[to_be_checked]
+                )), axis=0)
 
-        if stop:
+        gamma_valid = running_gamma > distance / distance_threshold
+
+        distance += distance_step_size
+
+        if (np.sum(to_be_checked) == 0) | (distance > maximum_test_distance):
             break
 
-    gamma = running_minima
+    return running_gamma
 
-    return x_new, y_new, z_new, gamma
+
+def calc_gamma_3d(coords_reference, dose_reference,
+                  coords_evaluation, dose_evaluation,
+                  distance_threshold, dose_threshold,
+                  lower_dose_cutoff=0, distance_step_size=None,
+                  maximum_test_distance=None):
+    if distance_step_size is None:
+        distance_step_size = distance_threshold / 10
+
+    if maximum_test_distance is None:
+        maximum_test_distance = distance_threshold * 2
+
+    reference_interpolation = RegularGridInterpolator(
+        coords_reference, dose_reference
+    )
+
+    y_reference, x_reference, z_reference = coords_reference
+
+    y, x, z = coords_evaluation
+    xx, yy, zz = np.meshgrid(x, y, z)
+    dose_evaluation = np.array(dose_evaluation)
+
+    dose_valid = dose_evaluation > lower_dose_cutoff
+    gamma_valid = np.ones_like(dose_evaluation).astype(bool)
+
+    running_gamma = np.inf * np.ones_like(dose_evaluation)
+
+    distance = 0
+
+    while True:
+        x_valid = (
+            (xx > np.min(x_reference) + distance) &
+            (xx < np.max(x_reference) - distance))
+
+        y_valid = (
+            (yy > np.min(y_reference) + distance) &
+            (yy < np.max(y_reference) - distance))
+
+        z_valid = (
+            (zz > np.min(z_reference) + distance) &
+            (zz < np.max(z_reference) - distance))
+
+        to_be_checked = (
+            x_valid & y_valid & z_valid &
+            dose_valid & gamma_valid
+        )
+
+        min_dose_diff = find_min_dose_difference_at_distance_3d(
+            xx[to_be_checked], yy[to_be_checked], zz[to_be_checked],
+            dose_evaluation[to_be_checked],
+            reference_interpolation,
+            distance, distance_step_size)
+
+        gamma_at_distance = np.sqrt(
+            min_dose_diff ** 2 / dose_threshold ** 2 +
+            distance **2 / distance_threshold **2)
+
+        running_gamma[to_be_checked] = np.min(
+            np.vstack((
+                    gamma_at_distance, running_gamma[to_be_checked]
+                )), axis=0)
+
+        gamma_valid = running_gamma > distance / distance_threshold
+
+        distance += distance_step_size
+
+        if (np.sum(to_be_checked) == 0) | (distance > maximum_test_distance):
+            break
+
+    return running_gamma

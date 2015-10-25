@@ -11,5 +11,4 @@
 # License along with this program. If not, see
 # http://www.gnu.org/licenses/.
 
-from .main import calc_gamma_2d, calc_gamma_3d
-from .unequal import calc_gamma_unequal, calc_gamma_1d
+from .main import calc_gamma
