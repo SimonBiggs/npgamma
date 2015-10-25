@@ -6,7 +6,18 @@ setup(
     author = "Simon Biggs",
     author_email = "mail@simonbiggs.net",
     description = "Perform a gamma evaluation comparing two dose grids",
-    long_description = "Using numpy to find the gamma index / gamma evaluation. This gamma index is often used in Medical Physics. Example of the code in action can be found [here (3d)](http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/example_3d.ipynb), and [here (2d)](http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/example_2d_equal_grid.ipynb). USE AT YOUR OWN RISK",
+    long_description = """Using numpy to find the gamma index. This gamma index is often used in Medical Physics. Notebooks demonstrating the usage of this this module can be found at the following links:
+
+  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%202D.ipynb
+  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%203D.ipynb
+  
+Notebooks stepping through the internals of the code demonstrating how it works are given at the following links:
+
+  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Method%20explanation%202D.ipynb
+  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Method%20explanation%203D.ipynb
+
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.""",
     keywords = ["radiotherapy", "gamma evaluation", "gamma index", "distance to agreement", "medical physics"],
     url = "https://github.com/SimonBiggs/npgamma/",
     packages = ["npgamma"],
