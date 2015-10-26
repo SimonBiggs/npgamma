@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name = "npgamma",
-    version = "0.4.0",
+    version = "0.4.1",
     author = "Simon Biggs",
     author_email = "mail@simonbiggs.net",
-    description = "Perform a gamma evaluation comparing two dose grids",
-    long_description = """Using numpy to find the gamma index. This gamma index is often used in Medical Physics. Notebooks demonstrating the usage of this this module can be found at the following links:
+    description = "Perform a gamma evaluation comparing two arbitrary dose grids in 1, 2, or 3 dimensions.",
+    long_description = """Using numpy and scipy to find the gamma index. This gamma index is often used in Medical Physics. Notebooks demonstrating the usage of this this module can be found at the following links:
 
   * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%202D.ipynb
   * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%203D.ipynb
