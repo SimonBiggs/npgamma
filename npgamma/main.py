@@ -24,10 +24,25 @@ def calc_gamma(coords_reference, dose_reference,
     if (
             type(coords_evaluation) is not tuple or
             type(coords_reference) is not tuple):
-        raise Exception(
-            "Input coordinates must be inputted as a tuple, for "
-            "one dimension input is (x,), for two dimensions, (y, x),  "
-            "for three dimensions input is (y, x, z).")
+        if (
+                type(coords_evaluation) is np.ndarray and
+                type(coords_reference) is np.ndarray):
+            if (
+                    len(np.shape(coords_evaluation)) == 1 and
+                    len(np.shape(coords_reference)) == 1):
+                
+                coords_evaluation = (coords_evaluation,)
+                coords_reference = (coords_reference,)
+            
+            else:
+                raise Exception(
+                    "Can only use numpy arrays as input for one dimensional gamma."
+                    )
+        else:
+            raise Exception(
+                "Input coordinates must be inputted as a tuple, for "
+                "one dimension input is (x,), for two dimensions, (y, x),  "
+                "for three dimensions input is (y, x, z).")
 
     reference_coords_shape = tuple([len(item) for item in coords_reference])
     if reference_coords_shape != np.shape(dose_reference):
