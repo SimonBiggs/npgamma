@@ -233,8 +233,8 @@ def calc_gamma_1d(coords_reference, dose_reference,
 
     while True:
         x_valid = (
-            (xx > np.min(x_reference) + distance) &
-            (xx < np.max(x_reference) - distance))
+            (xx >= np.min(x_reference) + distance) &
+            (xx <= np.max(x_reference) - distance))
 
         to_be_checked = (
             dose_valid & x_valid & gamma_valid
@@ -294,12 +294,12 @@ def calc_gamma_2d(coords_reference, dose_reference,
 
     while True:
         x_valid = (
-            (xx > np.min(x_reference) + distance) &
-            (xx < np.max(x_reference) - distance))
+            (xx >= np.min(x_reference) + distance) &
+            (xx <= np.max(x_reference) - distance))
 
         y_valid = (
-            (yy > np.min(y_reference) + distance) &
-            (yy < np.max(y_reference) - distance))
+            (yy >= np.min(y_reference) + distance) &
+            (yy <= np.max(y_reference) - distance))
 
         to_be_checked = (
             dose_valid & x_valid & y_valid & gamma_valid
@@ -360,16 +360,16 @@ def calc_gamma_3d(coords_reference, dose_reference,
 
     while True:
         x_valid = (
-            (xx > np.min(x_reference) + distance) &
-            (xx < np.max(x_reference) - distance))
+            (xx >= np.min(x_reference) + distance) &
+            (xx <= np.max(x_reference) - distance))
 
         y_valid = (
-            (yy > np.min(y_reference) + distance) &
-            (yy < np.max(y_reference) - distance))
+            (yy >= np.min(y_reference) + distance) &
+            (yy <= np.max(y_reference) - distance))
 
         z_valid = (
-            (zz > np.min(z_reference) + distance) &
-            (zz < np.max(z_reference) - distance))
+            (zz >= np.min(z_reference) + distance) &
+            (zz <= np.max(z_reference) - distance))
 
         to_be_checked = (
             x_valid & y_valid & z_valid &
