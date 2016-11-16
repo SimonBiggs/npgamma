@@ -11,4 +11,4 @@
 # License along with this program. If not, see
 # http://www.gnu.org/licenses/.
 
-from .main import calc_gamma
+from .main import calc_gamma, GammaCalculation

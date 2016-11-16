@@ -15,6 +15,7 @@
 import yaml
 import numpy as np
 from npgamma.main import calc_gamma
+from npgamma.main import GammaCalculation
 
 
 class TestGamma():
@@ -61,5 +62,29 @@ class TestGamma():
             
         assert np.all(self.expected_gamma[5,5,:] == self.gamma1d)
         
+        
+    def test_coords_stepsize(self):
+        """Confirm that the the largest distance between one point and any other
+        is less than the defined step size
+        """        
+        gamma_calculation = GammaCalculation(
+            self.coords, self.reference,
+            self.coords, self.evaluation,
+            0.3, 0.03)
+            
+        y, x, z = gamma_calculation.calculate_coordinates_kernel(1)
+        
+        distance_between_coords = np.sqrt(
+            (x[:, None] - x[None, :])**2 + 
+            (y[:, None] - y[None, :])**2 + 
+            (z[:, None] - z[None, :])**2)
+
+        distance_between_coords[
+          distance_between_coords == 0] = np.nan
+            
+        largest_difference = np.max(np.nanmin(distance_between_coords, axis=0))
+        
+        assert largest_difference <= gamma_calculation.distance_step_size
+        assert largest_difference > gamma_calculation.distance_step_size * 0.9
         
         
