@@ -1,0 +1,5 @@
+Name test modules/files starting with ‘test_’.
+Name test functions starting with ‘test_’.
+Name test classes starting with ‘Test’.
+Name test methods starting with ‘test_’.
+Make sure all packages with test code have an ‘__init__.py’ file.

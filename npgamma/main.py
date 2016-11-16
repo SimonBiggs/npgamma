@@ -225,7 +225,7 @@ def calc_gamma_1d(coords_reference, dose_reference,
     xx = np.array(x)
     dose_evaluation = np.array(dose_evaluation)
 
-    dose_valid = dose_evaluation > lower_dose_cutoff
+    dose_valid = dose_evaluation >= lower_dose_cutoff
     gamma_valid = np.ones_like(dose_evaluation).astype(bool)
 
     running_gamma = np.inf * np.ones_like(dose_evaluation)
@@ -285,7 +285,7 @@ def calc_gamma_2d(coords_reference, dose_reference,
     xx, yy = np.meshgrid(x, y)
     dose_evaluation = np.array(dose_evaluation)
 
-    dose_valid = dose_evaluation > lower_dose_cutoff
+    dose_valid = dose_evaluation >= lower_dose_cutoff
     gamma_valid = np.ones_like(dose_evaluation).astype(bool)
 
     running_gamma = np.inf * np.ones_like(dose_evaluation)
@@ -351,7 +351,7 @@ def calc_gamma_3d(coords_reference, dose_reference,
     xx, yy, zz = np.meshgrid(x, y, z)
     dose_evaluation = np.array(dose_evaluation)
 
-    dose_valid = dose_evaluation > lower_dose_cutoff
+    dose_valid = dose_evaluation >= lower_dose_cutoff
     gamma_valid = np.ones_like(dose_evaluation).astype(bool)
 
     running_gamma = np.inf * np.ones_like(dose_evaluation)
