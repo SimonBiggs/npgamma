@@ -12,7 +12,6 @@
 # http://www.gnu.org/licenses/.
 
 
-import yaml
 import numpy as np
 from npgamma.main import calc_gamma
 from npgamma.main import GammaCalculation
