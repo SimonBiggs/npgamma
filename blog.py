@@ -62,6 +62,31 @@ def administrator(method):
 
 class RunNpgamma(tornado.web.RequestHandler):
     """Calls test on npgamma."""
+
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header('Access-Control-Allow-Methods', 'POST')
+
+
+    def post(self):
+        received = json.loads(self.request.body.decode())
+
+        gamma_calculation = GammaCalculation(
+            received['coords_reference'], received['dose_reference'],
+            received['coords_evaluation'], received['dose_evaluation'],
+            received['distance_threshold'], received['dose_threshold'],
+            lower_dose_cutoff=received['lower_dose_cutoff'], 
+            distance_step_size=received['distance_step_size'],
+            maximum_test_distance=received['maximum_test_distance'])
+            
+        respond = {
+            'gamma': np.round(gamma_calculation.gamma, decimals=5).tolist()
+        }
+        
+        self.write(respond)
+            
+            
+            
     def get(self):
         grid = np.arange(0, 1, 0.1)
         dimensions = (len(grid), len(grid), len(grid))
@@ -176,7 +201,7 @@ settings = {
     "blog_title": u"Tornado Blog",
     "template_path": os.path.join(os.path.dirname(__file__), "templates"),
     "ui_modules": {"Entry": EntryModule},
-    "xsrf_cookies": True,
+    "xsrf_cookies": False,
 }
 application = tornado.web.Application([
     (r"/", HomeHandler),
