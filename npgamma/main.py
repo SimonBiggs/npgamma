@@ -182,7 +182,7 @@ class GammaCalculation():
 
         self.dose_valid = self.dose_evaluation >= self.lower_dose_cutoff
 
-        self.mesh_coords_evaluation = np.meshgrid(*self.coords_evaluation)
+        self.mesh_coords_evaluation = np.meshgrid(*self.coords_evaluation, indexing='ij')
 
         self.gamma = self.calculate_gamma()
 
@@ -272,7 +272,7 @@ class GammaCalculation():
             x_coords = distance * np.cos(theta)
             y_coords = distance * np.sin(theta)
 
-            return (y_coords, x_coords)
+            return (x_coords, y_coords)
 
         elif self.dimension == 3:
             number_of_rows = np.floor(
@@ -291,7 +291,7 @@ class GammaCalculation():
                 y_coords.append(distance * np.sin(phi) * np.sin(azimuth))
                 z_coords.append(distance * np.cos(phi) * np.ones_like(azimuth))
 
-            return (np.hstack(y_coords), np.hstack(x_coords), np.hstack(z_coords))
+            return (np.hstack(x_coords), np.hstack(y_coords), np.hstack(z_coords))
 
         else:
             raise Exception("No valid dimension")
