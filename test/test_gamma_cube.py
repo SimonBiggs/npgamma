@@ -20,9 +20,11 @@ from npgamma.main import GammaCalculation
 
 class TestGamma():
     def setUp(self):
-        grid = np.arange(0, 1, 0.1)
-        self.dimensions = (len(grid), len(grid), len(grid))
-        self.coords = (grid, grid, grid)
+        grid_x = np.arange(0, 1, 0.1)
+        grid_y = np.arange(0, 1.2, 0.1)
+        grid_z = np.arange(0, 1.4, 0.1)
+        self.dimensions = (len(grid_x), len(grid_y), len(grid_z))
+        self.coords = (grid_x, grid_y, grid_z)
         self.reference = np.zeros(self.dimensions)
         self.reference[2:-2:, 2:-2:, 2:-2:] = 1
 
@@ -47,8 +49,8 @@ class TestGamma():
             
     def test_regression_of_gamma_2d(self):    
         self.gamma2d = np.round(calc_gamma(
-            self.coords[0:2], self.reference[5,:,:],
-            self.coords[0:2], self.evaluation[5,:,:],
+            self.coords[1::], self.reference[5,:,:],
+            self.coords[1::], self.evaluation[5,:,:],
             0.3, 0.03), decimals=3)
             
         assert np.all(self.expected_gamma[5,:,:] == self.gamma2d)
@@ -56,8 +58,8 @@ class TestGamma():
     
     def test_regression_of_gamma_1d(self):    
         self.gamma1d = np.round(calc_gamma(
-            self.coords[0], self.reference[5,5,:],
-            self.coords[0], self.evaluation[5,5,:],
+            self.coords[2], self.reference[5,5,:],
+            self.coords[2], self.evaluation[5,5,:],
             0.3, 0.03), decimals=3)
             
         assert np.all(self.expected_gamma[5,5,:] == self.gamma1d)
@@ -72,7 +74,7 @@ class TestGamma():
             self.coords, self.evaluation,
             0.3, 0.03)
             
-        y, x, z = gamma_calculation.calculate_coordinates_kernel(1)
+        x, y, z = gamma_calculation.calculate_coordinates_kernel(1)
         
         distance_between_coords = np.sqrt(
             (x[:, None] - x[None, :])**2 + 
