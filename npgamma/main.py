@@ -29,7 +29,8 @@ def calc_gamma(coords_reference, dose_reference,
                coords_evaluation, dose_evaluation,
                distance_threshold, dose_threshold,
                lower_dose_cutoff=0, distance_step_size=None,
-               maximum_test_distance=np.inf):
+               maximum_test_distance=np.inf,
+               max_concurrent_calc_points=np.inf):
     """Compare two dose grids with the gamma index.
 
     Args:
@@ -104,7 +105,8 @@ def calc_gamma(coords_reference, dose_reference,
         distance_threshold, dose_threshold,
         lower_dose_cutoff=lower_dose_cutoff,
         distance_step_size=distance_step_size,
-        maximum_test_distance=maximum_test_distance)
+        maximum_test_distance=maximum_test_distance,
+        max_concurrent_calc_points=max_concurrent_calc_points)
 
 
     return gamma_calculation.gamma
@@ -142,7 +144,8 @@ class GammaCalculation():
             coords_evaluation, dose_evaluation,
             distance_threshold, dose_threshold,
             lower_dose_cutoff=0, distance_step_size=None,
-            maximum_test_distance=np.inf):
+            maximum_test_distance=np.inf,
+            max_concurrent_calc_points=np.inf):
 
         self.distance_threshold = distance_threshold
         self.dose_threshold = dose_threshold
@@ -184,6 +187,8 @@ class GammaCalculation():
 
         self.mesh_coords_evaluation = np.meshgrid(*self.coords_evaluation, indexing='ij')
 
+        self.max_concurrent_calc_points = max_concurrent_calc_points
+
         self.gamma = self.calculate_gamma()
 
 
@@ -208,7 +213,8 @@ class GammaCalculation():
 
                 to_be_checked = to_be_checked & self.within_bounds[key]
 
-            min_dose_difference = self.min_dose_difference(to_be_checked, distance)
+            min_dose_difference = self.calculate_min_dose_difference_by_slice(
+                to_be_checked, distance)
 
             gamma_at_distance = np.sqrt(
                 min_dose_difference ** 2 / self.dose_threshold ** 2 +
@@ -229,10 +235,40 @@ class GammaCalculation():
         running_gamma[np.isinf(running_gamma)] = np.nan
         return running_gamma
 
-
-    def min_dose_difference(self, to_be_checked, distance):
-        """Determines the minimum dose difference for a given distance from each evaluation point"""
+    
+    def calculate_min_dose_difference_by_slice(self, to_be_checked, distance):
+        """Determines minimum dose differences with the evaluation set divided into slices"""
         coordinates_at_distance_kernel = self.calculate_coordinates_kernel(distance)
+
+        all_checks = np.where(to_be_checked)
+
+        slices = np.floor(
+            len(coordinates_at_distance_kernel[0]) * len(all_checks[0]) / 
+            self.max_concurrent_calc_points) + 1
+
+        slice_shuffle = np.arange(len(all_checks[0]))
+        np.random.shuffle(slice_shuffle)
+        sliced = np.array_split(slice_shuffle, slices)
+
+        min_dose_difference = np.nan * np.ones_like(all_checks[0])
+
+        for current_slice in sliced:
+            current_to_be_checked = np.zeros_like(to_be_checked).astype(bool)
+            current_to_be_checked[[
+                item[current_slice] for
+                item in all_checks]] = True
+            
+            assert np.all(to_be_checked[current_to_be_checked])
+
+            min_dose_difference[np.sort(current_slice)] = self.calculate_min_dose_difference(
+                current_to_be_checked, coordinates_at_distance_kernel)
+
+        assert np.all(np.invert(np.isnan(min_dose_difference)))
+        return min_dose_difference
+
+
+    def calculate_min_dose_difference(self, to_be_checked, coordinates_at_distance_kernel):
+        """Determines the minimum dose difference for a given distance from each evaluation point"""
 
         coordinates_at_distance = []
         for i, _ in enumerate(self.coords_key):
