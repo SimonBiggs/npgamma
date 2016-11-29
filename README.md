@@ -4,10 +4,4 @@ Using numpy and scipy to find the gamma index. This gamma index is often used in
   * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%202D.ipynb
   * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%203D.ipynb
   
-Notebooks stepping through the internals of the code demonstrating how it works are given at the following links:
-
-  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Method%20explanation%202D.ipynb
-  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Method%20explanation%203D.ipynb
-
-
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
