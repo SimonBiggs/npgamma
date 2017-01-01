@@ -2,7 +2,7 @@
 
 Install with:
 
-    pip install npgamma
+    pip install npgamma
     
 Using numpy and scipy to find the gamma index. This gamma index is often used in Medical Physics. Notebooks demonstrating the usage of this this module can be found at the following links:
 
