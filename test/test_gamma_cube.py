@@ -10,16 +10,17 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with this program. If not, see
 # http://www.gnu.org/licenses/.
+"""Tests for npgamma."""
 
-
-import yaml
 import numpy as np
-from npgamma.main import calc_gamma
-from npgamma.main import GammaCalculation
+from npgamma import calc_gamma, _calculate_coordinates_kernel
 
 
 class TestGamma():
+    """Testing class."""
+
     def setUp(self):
+        """Run before each test."""
         grid_x = np.arange(0, 1, 0.1)
         grid_y = np.arange(0, 1.2, 0.1)
         grid_z = np.arange(0, 1.4, 0.1)
@@ -30,63 +31,62 @@ class TestGamma():
 
         self.evaluation = np.zeros(self.dimensions)
         self.evaluation[3:-2:, 4:-2:, 5:-2:] = 1.015
-        
+
         self.expected_gamma = np.zeros(self.dimensions)
         self.expected_gamma[2:-2:, 2:-2:, 2:-2:] = 0.4
         self.expected_gamma[3:-3:, 3:-3:, 3:-3:] = 0.7
         self.expected_gamma[4:-4:, 4:-4:, 4:-4:] = 1
         self.expected_gamma[3:-2:, 4:-2:, 5:-2:] = 0.5
-        
-        
-    def test_regression_of_gamma_3d(self):    
+
+    def test_regression_of_gamma_3d(self):
+        """Test for changes in expected 3D gamma."""
         self.gamma3d = np.round(calc_gamma(
             self.coords, self.reference,
             self.coords, self.evaluation,
             0.3, 0.03), decimals=3)
-            
+
         assert np.all(self.expected_gamma == self.gamma3d)
-            
-            
-    def test_regression_of_gamma_2d(self):    
+
+    def test_regression_of_gamma_2d(self):
+        """Test for changes in expected 2D gamma."""
         self.gamma2d = np.round(calc_gamma(
-            self.coords[1::], self.reference[5,:,:],
-            self.coords[1::], self.evaluation[5,:,:],
+            self.coords[1::], self.reference[5, :, :],
+            self.coords[1::], self.evaluation[5, :, :],
             0.3, 0.03), decimals=3)
-            
-        assert np.all(self.expected_gamma[5,:,:] == self.gamma2d)
-        
-    
-    def test_regression_of_gamma_1d(self):    
+
+        assert np.all(self.expected_gamma[5, :, :] == self.gamma2d)
+
+    def test_regression_of_gamma_1d(self):
+        """Test for changes in expected 3D gamma."""
         self.gamma1d = np.round(calc_gamma(
-            self.coords[2], self.reference[5,5,:],
-            self.coords[2], self.evaluation[5,5,:],
+            self.coords[2], self.reference[5, 5, :],
+            self.coords[2], self.evaluation[5, 5, :],
             0.3, 0.03), decimals=3)
-            
-        assert np.all(self.expected_gamma[5,5,:] == self.gamma1d)
-        
-        
+
+        assert np.all(self.expected_gamma[5, 5, :] == self.gamma1d)
+
     def test_coords_stepsize(self):
-        """Confirm that the the largest distance between one point and any other
+        """Testing correct stepsize implementation.
+
+        Confirm that the the largest distance between one point and any other
         is less than the defined step size
-        """        
-        gamma_calculation = GammaCalculation(
-            self.coords, self.reference,
-            self.coords, self.evaluation,
-            0.3, 0.03)
-            
-        x, y, z = gamma_calculation.calculate_coordinates_kernel(1)
-        
+        """
+        distance_step_size = 0.03
+        num_dimensions = 3
+        distance = 1
+
+        x, y, z = _calculate_coordinates_kernel(
+            distance, num_dimensions, distance_step_size)
+
         distance_between_coords = np.sqrt(
-            (x[:, None] - x[None, :])**2 + 
-            (y[:, None] - y[None, :])**2 + 
+            (x[:, None] - x[None, :])**2 +
+            (y[:, None] - y[None, :])**2 +
             (z[:, None] - z[None, :])**2)
 
         distance_between_coords[
           distance_between_coords == 0] = np.nan
-            
+
         largest_difference = np.max(np.nanmin(distance_between_coords, axis=0))
-        
-        assert largest_difference <= gamma_calculation.distance_step_size
-        assert largest_difference > gamma_calculation.distance_step_size * 0.9
-        
-        
+
+        assert largest_difference <= distance_step_size
+        assert largest_difference > distance_step_size * 0.9
