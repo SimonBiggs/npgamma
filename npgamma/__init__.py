@@ -193,6 +193,7 @@ def _calculate_min_dose_difference_by_slice(
         len(all_checks[0]) / max_concurrent_calc_points) + 1)
 
     index = np.arange(len(all_checks[0]))
+    np.random.shuffle(index)
     sliced = np.array_split(index, num_slices)
 
     thread_sets_of_slices = np.array_split(sliced, num_threads)
