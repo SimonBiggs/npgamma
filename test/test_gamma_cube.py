@@ -90,3 +90,13 @@ class TestGamma():
 
         assert largest_difference <= distance_step_size
         assert largest_difference > distance_step_size * 0.9
+
+    def test_calc_by_sections(self):
+        """Testing that splitting into sections doesn't change the result."""
+        self.concurrent_reduction = np.round(calc_gamma(
+            self.coords, self.reference,
+            self.coords, self.evaluation,
+            0.3, 0.03, max_concurrent_calc_points=10000), decimals=3)
+
+        print(self.expected_gamma - self.concurrent_reduction)
+        assert np.all(self.expected_gamma == self.concurrent_reduction)

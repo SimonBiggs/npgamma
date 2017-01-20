@@ -25,6 +25,7 @@ independent validation.
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from multiprocessing import Process, Queue
 
 
 def _run_input_checks(
@@ -152,28 +153,13 @@ def _calculate_min_dose_difference(
     return min_dose_difference
 
 
-def _calculate_min_dose_difference_by_slice(
-        max_concurrent_calc_points, num_dimensions, mesh_coords_evaluation,
+def _step_through_slices(
+        current_thread_set, all_checks, num_dimensions, mesh_coords_evaluation,
         to_be_checked, reference_interpolation, dose_evaluation,
-        coordinates_at_distance_kernel, **kwargs):
-    """Determine minimum dose differences.
+        coordinates_at_distance_kernel, output):
+    min_dose_difference = (np.nan * np.ones_like(all_checks[0]))
 
-    Calculation is made with the evaluation set divided into slices. This
-    enables less RAM usage.
-    """
-    all_checks = np.where(to_be_checked)
-
-    slices = np.floor(
-        len(coordinates_at_distance_kernel[0]) * len(all_checks[0]) /
-        max_concurrent_calc_points) + 1
-
-    slice_shuffle = np.arange(len(all_checks[0]))
-    np.random.shuffle(slice_shuffle)
-    sliced = np.array_split(slice_shuffle, slices)
-
-    min_dose_difference = np.nan * np.ones_like(all_checks[0])
-
-    for current_slice in sliced:
+    for current_slice in current_thread_set:
         current_to_be_checked = np.zeros_like(to_be_checked).astype(bool)
         current_to_be_checked[[
             item[current_slice] for
@@ -183,11 +169,54 @@ def _calculate_min_dose_difference_by_slice(
 
         min_dose_difference[np.sort(current_slice)] = (
             _calculate_min_dose_difference(
-                num_dimensions, mesh_coords_evaluation, to_be_checked,
+                num_dimensions, mesh_coords_evaluation, current_to_be_checked,
                 reference_interpolation, dose_evaluation,
                 coordinates_at_distance_kernel))
 
+    output.put(min_dose_difference)
+
+
+def _calculate_min_dose_difference_by_slice(
+        max_concurrent_calc_points, num_threads,
+        num_dimensions, mesh_coords_evaluation, to_be_checked,
+        reference_interpolation, dose_evaluation,
+        coordinates_at_distance_kernel, **kwargs):
+    """Determine minimum dose differences.
+
+    Calculation is made with the evaluation set divided into slices. This
+    enables less RAM usage.
+    """
+    all_checks = np.where(to_be_checked)
+
+    num_slices = num_threads * (np.floor(
+        len(coordinates_at_distance_kernel[0]) *
+        len(all_checks[0]) / max_concurrent_calc_points) + 1)
+
+    index = np.arange(len(all_checks[0]))
+    sliced = np.array_split(index, num_slices)
+
+    thread_sets_of_slices = np.array_split(sliced, num_threads)
+
+    output_queue = Queue()
+
+    for current_thread_set in thread_sets_of_slices:
+        Process(
+            target=_step_through_slices,
+            args=(
+                current_thread_set,
+                all_checks, num_dimensions, mesh_coords_evaluation,
+                to_be_checked, reference_interpolation, dose_evaluation,
+                coordinates_at_distance_kernel, output_queue)).start()
+
+    min_dose_difference = (np.nan * np.ones_like(all_checks[0]))
+
+    for i in range(num_threads):
+        result = output_queue.get()
+        ref = np.invert(np.isnan(result))
+        min_dose_difference[ref] = result[ref]
+
     assert np.all(np.invert(np.isnan(min_dose_difference)))
+
     return min_dose_difference
 
 
@@ -246,7 +275,8 @@ def calc_gamma(coords_reference, dose_reference,
                distance_threshold, dose_threshold,
                lower_dose_cutoff=0, distance_step_size=None,
                maximum_test_distance=np.inf,
-               max_concurrent_calc_points=np.inf):
+               max_concurrent_calc_points=np.inf,
+               num_threads=1):
     """Compare two dose grids with the gamma index.
 
     Args:
@@ -281,8 +311,6 @@ def calc_gamma(coords_reference, dose_reference,
     if distance_step_size is None:
         distance_step_size = distance_threshold / 10
 
-    print(coords_reference)
-    print(np.array(dose_reference))
     reference_interpolation = RegularGridInterpolator(
         coords_reference, np.array(dose_reference)
     )
@@ -302,7 +330,8 @@ def calc_gamma(coords_reference, dose_reference,
         "dose_threshold": dose_threshold,
         "distance_step_size": distance_step_size,
         "max_concurrent_calc_points": max_concurrent_calc_points,
-        "maximum_test_distance": maximum_test_distance}
+        "maximum_test_distance": maximum_test_distance,
+        "num_threads": num_threads}
 
     gamma = _calculation_loop(**kwargs)
 
