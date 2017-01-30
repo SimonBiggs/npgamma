@@ -2,7 +2,7 @@
 
 The images within this directory are those referenced by the following paper:
 
- > C. Agnew, C. McGarry, A tool to include gamma analysis software into a quality assurance program. Radiotherapy and Oncology (2016), http://dx.doi.org/10.1016/j.radonc.2015.11.034
+ > C. Agnew, C. McGarry, *A tool to include gamma analysis software into a quality assurance program*. Radiotherapy and Oncology (2016), http://dx.doi.org/10.1016/j.radonc.2015.11.034
 
 They are included within this repository with permission from Christina Agnew.
 
