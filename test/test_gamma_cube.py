@@ -98,5 +98,15 @@ class TestGamma():
             self.coords, self.evaluation,
             0.3, 0.03, max_concurrent_calc_points=10000), decimals=3)
 
-        print(self.expected_gamma - self.concurrent_reduction)
+        # print(self.expected_gamma - self.concurrent_reduction)
         assert np.all(self.expected_gamma == self.concurrent_reduction)
+
+    def test_multithreading(self):
+        """Testing that running multiple threads doesn't change the result."""
+        self.multithreading = np.round(calc_gamma(
+            self.coords, self.reference,
+            self.coords, self.evaluation,
+            0.3, 0.03, num_threads=4), decimals=3)
+
+        # print(self.expected_gamma - self.multithreading)
+        assert np.all(self.expected_gamma == self.multithreading)

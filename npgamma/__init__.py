@@ -153,13 +153,28 @@ def _calculate_min_dose_difference(
     return min_dose_difference
 
 
-def _step_through_slices(
-        current_thread_set, all_checks, num_dimensions, mesh_coords_evaluation,
-        to_be_checked, reference_interpolation, dose_evaluation,
-        coordinates_at_distance_kernel, output):
+def _calculate_min_dose_difference_by_slice(
+        max_concurrent_calc_points,
+        num_dimensions, mesh_coords_evaluation, to_be_checked,
+        reference_interpolation, dose_evaluation,
+        coordinates_at_distance_kernel, **kwargs):
+    """Determine minimum dose differences.
+
+    Calculation is made with the evaluation set divided into slices. This
+    enables less RAM usage.
+    """
+    all_checks = np.where(to_be_checked)
     min_dose_difference = (np.nan * np.ones_like(all_checks[0]))
 
-    for current_slice in current_thread_set:
+    num_slices = np.floor(
+        len(coordinates_at_distance_kernel[0]) *
+        len(all_checks[0]) / max_concurrent_calc_points) + 1
+
+    index = np.arange(len(all_checks[0]))
+    np.random.shuffle(index)
+    sliced = np.array_split(index, num_slices)
+
+    for current_slice in sliced:
         current_to_be_checked = np.zeros_like(to_be_checked).astype(bool)
         current_to_be_checked[[
             item[current_slice] for
@@ -173,49 +188,6 @@ def _step_through_slices(
                 reference_interpolation, dose_evaluation,
                 coordinates_at_distance_kernel))
 
-    output.put(min_dose_difference)
-
-
-def _calculate_min_dose_difference_by_slice(
-        max_concurrent_calc_points, num_threads,
-        num_dimensions, mesh_coords_evaluation, to_be_checked,
-        reference_interpolation, dose_evaluation,
-        coordinates_at_distance_kernel, **kwargs):
-    """Determine minimum dose differences.
-
-    Calculation is made with the evaluation set divided into slices. This
-    enables less RAM usage.
-    """
-    all_checks = np.where(to_be_checked)
-
-    num_slices = num_threads * (np.floor(
-        len(coordinates_at_distance_kernel[0]) *
-        len(all_checks[0]) / max_concurrent_calc_points) + 1)
-
-    index = np.arange(len(all_checks[0]))
-    np.random.shuffle(index)
-    sliced = np.array_split(index, num_slices)
-
-    thread_sets_of_slices = np.array_split(sliced, num_threads)
-
-    output_queue = Queue()
-
-    for current_thread_set in thread_sets_of_slices:
-        Process(
-            target=_step_through_slices,
-            args=(
-                current_thread_set,
-                all_checks, num_dimensions, mesh_coords_evaluation,
-                to_be_checked, reference_interpolation, dose_evaluation,
-                coordinates_at_distance_kernel, output_queue)).start()
-
-    min_dose_difference = (np.nan * np.ones_like(all_checks[0]))
-
-    for i in range(num_threads):
-        result = output_queue.get()
-        ref = np.invert(np.isnan(result))
-        min_dose_difference[ref] = result[ref]
-
     assert np.all(np.invert(np.isnan(min_dose_difference)))
 
     return min_dose_difference
@@ -223,13 +195,14 @@ def _calculate_min_dose_difference_by_slice(
 
 def _calculation_loop(**kwargs):
     """Iteratively calculates gamma at increasing distances."""
+    dose_valid = kwargs['dose_evaluation'] >= kwargs['lower_dose_cutoff']
     gamma_valid = np.ones_like(kwargs['dose_evaluation']).astype(bool)
     running_gamma = np.inf * np.ones_like(kwargs['dose_evaluation'])
     distance = 0
 
     while True:
         to_be_checked = (
-            kwargs['dose_valid'] & gamma_valid)
+            dose_valid & gamma_valid)
 
         for i in range(kwargs['num_dimensions']):
             bounds_test = (
@@ -267,8 +240,12 @@ def _calculation_loop(**kwargs):
                 (distance > kwargs['maximum_test_distance'])):
             break
 
-    running_gamma[np.isinf(running_gamma)] = np.nan
     return running_gamma
+
+
+def _new_thread(kwargs, output, thread_index, gamma_store):
+    gamma_store[thread_index] = _calculation_loop(**kwargs)
+    output.put(gamma_store)
 
 
 def calc_gamma(coords_reference, dose_reference,
@@ -317,23 +294,55 @@ def calc_gamma(coords_reference, dose_reference,
     )
 
     dose_evaluation = np.array(dose_evaluation)
-    dose_valid = dose_evaluation >= lower_dose_cutoff
+    dose_evaluation_flat = np.ravel(dose_evaluation)
+
     mesh_coords_evaluation = np.meshgrid(*coords_evaluation, indexing='ij')
+    coords_evaluation_flat = [
+        np.ravel(item)
+        for item in mesh_coords_evaluation]
+
+    evaluation_index = np.arange(len(dose_evaluation_flat))
+    np.random.shuffle(evaluation_index)
+    thread_indicies = np.array_split(evaluation_index, num_threads)
+
+    output = Queue()
 
     kwargs = {
         "coords_reference": coords_reference,
         "num_dimensions": len(coords_evaluation),
         "reference_interpolation": reference_interpolation,
-        "dose_evaluation": dose_evaluation,
-        "dose_valid": dose_valid,
-        "mesh_coords_evaluation": mesh_coords_evaluation,
+        "lower_dose_cutoff": lower_dose_cutoff,
         "distance_threshold": distance_threshold,
         "dose_threshold": dose_threshold,
         "distance_step_size": distance_step_size,
-        "max_concurrent_calc_points": max_concurrent_calc_points,
-        "maximum_test_distance": maximum_test_distance,
-        "num_threads": num_threads}
+        "max_concurrent_calc_points": max_concurrent_calc_points / num_threads,
+        "maximum_test_distance": maximum_test_distance}
 
-    gamma = _calculation_loop(**kwargs)
+    for thread_index in thread_indicies:
+        thread_index.sort()
+        thread_dose_evaluation = dose_evaluation_flat[thread_index]
+        thread_coords_evaluation = [
+            coords[thread_index]
+            for coords in coords_evaluation_flat]
+        kwargs['dose_evaluation'] = thread_dose_evaluation
+        kwargs['mesh_coords_evaluation'] = thread_coords_evaluation
+
+        Process(
+            target=_new_thread,
+            args=(
+                kwargs, output, thread_index,
+                np.nan * np.ones_like(dose_evaluation_flat))).start()
+
+    gamma_flat = np.nan * np.ones_like(dose_evaluation_flat)
+
+    for i in range(num_threads):
+        result = output.get()
+        thread_reference = np.invert(np.isnan(result))
+        gamma_flat[thread_reference] = result[thread_reference]
+
+    assert np.all(np.invert(np.isnan(gamma_flat)))
+
+    gamma_flat[np.isinf(gamma_flat)] = np.nan
+    gamma = np.reshape(gamma_flat, np.shape(dose_evaluation))
 
     return gamma
