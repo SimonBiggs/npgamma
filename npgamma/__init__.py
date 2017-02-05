@@ -204,17 +204,6 @@ def _calculation_loop(**kwargs):
         to_be_checked = (
             dose_valid & gamma_valid)
 
-        for i in range(kwargs['num_dimensions']):
-            bounds_test = (
-                (
-                    kwargs['mesh_coords_evaluation'][i] >=
-                    np.min(kwargs['coords_reference'][i]) + distance) &
-                (
-                    kwargs['mesh_coords_evaluation'][i] <=
-                    np.max(kwargs['coords_reference'][i]) - distance))
-
-            to_be_checked = to_be_checked & bounds_test
-
         coordinates_at_distance_kernel = _calculate_coordinates_kernel(
             distance, kwargs['num_dimensions'], kwargs['distance_step_size'])
         min_dose_difference = _calculate_min_dose_difference_by_slice(
@@ -290,7 +279,8 @@ def calc_gamma(coords_reference, dose_reference,
         distance_step_size = distance_threshold / 10
 
     reference_interpolation = RegularGridInterpolator(
-        coords_reference, np.array(dose_reference)
+        coords_reference, np.array(dose_reference),
+        bounds_error=False, fill_value=np.inf
     )
 
     dose_evaluation = np.array(dose_evaluation)
