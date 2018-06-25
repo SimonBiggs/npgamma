@@ -13,6 +13,7 @@ Before deciding to use this package please read the following paper:
 > **A fast algorithm for gamma evaluation in 3D**
 >
 > Markus Wendling Lambert J. Zijp Leah N. McDermott Ewoud J. Smit Jan‐Jakob Sonke Ben J. Mijnheer Marcel van Herk
+>
 > First published: 19 April 2007 <https://doi.org/10.1118/1.2721657>
 
 ## Installation
