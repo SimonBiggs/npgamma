@@ -24,6 +24,12 @@ Using numpy and scipy to find the gamma index. This gamma index is often used in
 
   * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%202D.ipynb
   * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%203D.ipynb
+  
+## Independent implementation
+
+For an independent implementation which can be used to validate npgamma see:
+
+> <https://github.com/rickardcronholm/gammaValidation>
 
 ## License agreement
 
