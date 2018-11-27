@@ -23,7 +23,10 @@
 # You should have received a copy of the Apache-2.0 along with this
 # program. If not, see <http://www.apache.org/licenses/LICENSE-2.0>.
 
-"""Compare two dose grids with the gamma index.
+"""[DEPRECATED] Use `pymedphys.gamma` instead. See
+https://pymedphys.com/en/latest/user/gamma.html
+
+Compare two dose grids with the gamma index.
 
 This module is a python implementation of the gamma index.
 It computes 1, 2, or 3 dimensional gamma with arbitrary gird sizes while
@@ -35,9 +38,23 @@ It needs to be noted that this code base has not yet undergone sufficient
 independent validation.
 """
 
+
+
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from multiprocessing import Process, Queue
+
+import warnings
+
+WARNING_STRING = (
+    'The `npgamma` module is deprecated. It contains known bugs. '
+    'The bugfixes for these are within the `pymedphys.gamma` module. '
+    'See https://pymedphys.com/en/latest/user/gamma.html for how to use '
+    'the module that has superseded `npgamma`.'
+)
+
+
+warnings.warn(WARNING_STRING, UserWarning)
 
 
 def _run_input_checks(
@@ -256,7 +273,10 @@ def calc_gamma(coords_reference, dose_reference,
                maximum_test_distance=np.inf,
                max_concurrent_calc_points=np.inf,
                num_threads=1):
-    """Compare two dose grids with the gamma index.
+    """[DEPRECATED] Use `pymedphys.gamma` instead. See
+    https://pymedphys.com/en/latest/user/gamma.html
+
+    Compare two dose grids with the gamma index.
 
     Args:
         coords_reference (tuple): The reference coordinates.
@@ -283,6 +303,8 @@ def calc_gamma(coords_reference, dose_reference,
         gamma (np.array): The array of gamma values the same shape as that
             given by the evaluation coordinates and dose.
     """
+    warnings.warn(WARNING_STRING, UserWarning)
+
     coords_reference, coords_evaluation = _run_input_checks(
         coords_reference, dose_reference,
         coords_evaluation, dose_evaluation)

@@ -2,22 +2,18 @@ from setuptools import setup
 
 setup(
     name = "npgamma",
-    version = "0.7.0",
+    version = "0.8.0",
     author = "Simon Biggs",
-    author_email = "mail@simonbiggs.net",
-    description = "Perform a gamma evaluation comparing two arbitrary dose grids in 1, 2, or 3 dimensions.",
-    long_description = """Using numpy and scipy to find the gamma index. This gamma index is often used in Medical Physics. Notebooks demonstrating the usage of this this module can be found at the following links:
+    author_email = "me@simonbiggs.net",
+    description = "`npgamma` is deprecated. Please use `gamma` module within the `pymedphys` package instead.",
+    long_description = """
+`npgamma` is deprecated. It has been superceded by `pymedphys.gamma`.
 
-  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%202D.ipynb
-  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Module%20usage%203D.ipynb
-  
-Notebooks stepping through the internals of the code demonstrating how it works are given at the following links:
+To install `pymedphys` see https://pymedphys.com/en/latest/getting-started/installation.html
 
-  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Method%20explanation%202D.ipynb
-  * http://nbviewer.ipython.org/github/SimonBiggs/npgamma/blob/master/Method%20explanation%203D.ipynb
-
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.""",
+On usage of the gamma function within `pymedphys` see
+https://pymedphys.com/en/latest/user/gamma.html
+    """,
     keywords = ["radiotherapy", "gamma evaluation", "gamma index", "distance to agreement", "medical physics"],
     url = "https://github.com/SimonBiggs/npgamma/",
     packages = ["npgamma"],
