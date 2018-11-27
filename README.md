@@ -1,5 +1,16 @@
 # Numpy Gamma Index
 
+## Deprecation notice
+
+`npgamma` is deprecated. A known bug in this version of `npgamma` is that the evaluation and reference grid definitions are flipped. This has flow on effects the to parameters such as the lower_dose_threshold and simply swapping evaluation and reference grids may not achieve the desired results.
+
+`npgamma` is superceded by `pymedphys.gamma`.
+
+To install `pymedphys` see https://pymedphys.com/en/latest/getting-started/installation.html
+
+On usage of the gamma function within `pymedphys` see
+https://pymedphys.com/en/latest/user/gamma.html
+
 ## Important note
 
 Before deciding to use this package please read the following paper:
